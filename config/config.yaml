@@ -1,0 +1,67 @@
+# Data Configuration
+data:
+  source_path: "data/WA_Fn-UseC_-Telco-Customer-Churn.csv"
+  target_column: "Churn"
+  test_size: 0.2
+  validation_size: 0.1
+  random_state: 42
+
+# Model Configuration
+model:
+  algorithms:
+    - name: "random_forest"
+      params:
+        n_estimators: 100
+        max_depth: 10
+        random_state: 42
+    - name: "xgboost"
+      params:
+        n_estimators: 100
+        max_depth: 6
+        learning_rate: 0.1
+        random_state: 42
+    - name: "logistic_regression"
+      params:
+        random_state: 42
+        max_iter: 1000
+
+# Training Configuration
+training:
+  cross_validation_folds: 5
+  hyperparameter_tuning: True
+  early_stopping: True
+  metrics:
+    - accuracy
+    - precision
+    - recall
+    - f1_score
+    - roc_auc
+
+# MLflow Configuration
+mlflow:
+  experiment_name: "churn_prediction"
+  artifact_location: "s3://mlops-dev-dansarpong-s3/artifacts"
+  auto_log: True
+
+# A/B Testing Configuration
+ab_testing:
+  enabled: True
+  traffic_split: 0.5
+  minimum_samples: 1000
+  statistical_significance: 0.05
+  evaluation_window_days: 7
+
+# Monitoring Configuration
+monitoring:
+  performance_threshold: 0.85
+  data_drift_threshold: 0.1
+  prediction_drift_threshold: 0.1
+  alert_email: "dansarpong.me@gmail.com"
+
+# Infrastructure Configuration
+infrastructure:
+  aws:
+    region: "us-east-1"
+    s3_bucket: "amt-dansarpong-mlops"
+  #   ec2_instance_type: "m5.large"
+  #   ecs_cluster: "churn-prediction-cluster"

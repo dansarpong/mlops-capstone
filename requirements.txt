@@ -1,0 +1,60 @@
+# Core ML libraries
+scikit-learn
+tensorflow
+torch
+torchvision
+xgboost
+
+# Data manipulation and analysis
+pandas
+numpy
+matplotlib
+seaborn
+
+# MLOps and experiment tracking
+mlflow
+dvc
+optuna
+
+# API and web framework
+fastapi
+uvicorn
+gunicorn
+pydantic
+
+# Database and storage
+sqlalchemy
+boto3
+psycopg2-binary
+
+# Workflow orchestration
+apache-airflow
+apache-airflow-providers-amazon
+
+# Monitoring and logging
+prometheus-client
+structlog
+sentry-sdk
+
+# Testing
+pytest
+pytest-cov
+pytest-mock
+
+# Utilities
+python-dotenv
+click
+pyyaml
+requests
+joblib
+
+# Data validation
+great-expectations
+pydantic-settings
+
+# Containerization
+docker
+
+# Additional dependencies for API
+httpx
+python-multipart
