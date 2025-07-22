@@ -192,14 +192,14 @@ if __name__ == "__main__":
     import yaml
     
     # Load configuration
-    with open('/workspaces/mlops-capstone/config/config.yaml', 'r') as f:
+    with open('/opt/airflow/config/config.yaml', 'r') as f:
         config = yaml.safe_load(f)
     
     # Initialize preprocessor
     preprocessor = DataPreprocessor(config)
     
     # Load and preprocess data
-    df = preprocessor.load_data('/workspaces/mlops-capstone/data/WA_Fn-UseC_-Telco-Customer-Churn.csv')
+    df = preprocessor.load_data('/opt/airflow/data/WA_Fn-UseC_-Telco-Customer-Churn.csv')
     df = preprocessor.validate_data(df)
     
     # Create data quality report
@@ -217,7 +217,7 @@ if __name__ == "__main__":
     X_train_processed, X_test_processed = preprocessor.fit_transform(X_train, X_test)
     
     # Save preprocessor
-    preprocessor.save_preprocessor('/workspaces/mlops-capstone/models/preprocessor.pkl')
+    preprocessor.save_preprocessor('/opt/airflow/models/preprocessor.pkl')
     
     print(f"Preprocessed training data shape: {X_train_processed.shape}")
     print(f"Preprocessed test data shape: {X_test_processed.shape}")
