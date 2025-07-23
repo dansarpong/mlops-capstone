@@ -62,6 +62,6 @@ monitoring:
 infrastructure:
   aws:
     region: "us-east-1"
-    s3_bucket: "amt-dansarpong-mlops"
+    s3_bucket: "mlops-dev-dansarpong-s3"
   #   ec2_instance_type: "m5.large"
   #   ecs_cluster: "churn-prediction-cluster"
