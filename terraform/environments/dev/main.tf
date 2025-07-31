@@ -88,7 +88,7 @@ module "platform_instance_role" {
   name = "${var.environment}-platform-instance-role"
 
   trusted_role_services = ["ec2.amazonaws.com"]
-  managed_policy_arns = ["arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"]
+  managed_policy_arns   = ["arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"]
 
   # RDS access
   policies = {
@@ -143,17 +143,7 @@ module "platform_ec2" {
   security_group_ids   = [module.platform_sg.security_group_id]
   iam_instance_profile = module.platform_instance_role.instance_profile_name
 
-  user_data = <<-EOF
-    #!/bin/bash
-    sudo yum update -y
-
-    # Install Docker
-    sudo yum install -y docker
-    sudo systemctl enable docker
-    sudo systemctl start docker
-    sudo usermod -aG docker ec2-user
-  
-    EOF
+  user_data = file("${path.module}/../../../assets/test_ec2.sh")
 
   # Elastic IP
   allocate_elastic_ip = true
@@ -201,8 +191,8 @@ module "rds" {
 module "devops_s3" {
   source = "../../modules/s3"
 
-  bucket_name       = "${var.environment}-dansarpong-s3"
-  versioning        = true
+  bucket_name = "${var.environment}-dansarpong-s3"
+  versioning  = true
 
   lifecycle_rules = [
     {
