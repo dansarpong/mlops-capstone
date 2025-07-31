@@ -1,0 +1,45 @@
+name: MLOps CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main ]
+
+env:
+  REPO: dansarpong/mlops-capstone
+  AWS_REGION: us-east-1
+
+jobs:
+  deploy-staging:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: Run deployment on EC2
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.EC2_HOST }}
+        username: ${{ secrets.EC2_USERNAME }}
+        key: ${{ secrets.EC2_SSH_KEY }}
+        script: |
+          # Clone the repository
+          if [ -d "mlops-capstone" ]; then
+            cd mlops-capstone
+            git pull origin main
+          else
+            git clone https://github.com/${{ env.REPO }} mlops-capstone
+            cd mlops-capstone
+          fi
+
+          # Stop existing Docker containers
+          docker-compose -f docker-compose.yml down || true
+
+          # Start Docker containers
+          docker-compose -f docker-compose.yml up -d
