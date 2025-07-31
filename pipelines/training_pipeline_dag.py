@@ -10,6 +10,9 @@ import sys
 import os
 import yaml
 import logging
+import boto3
+import numpy as np
+
 
 # Add project root to Python path for container environment
 sys.path.append('/opt/airflow')
@@ -42,19 +45,25 @@ dag = DAG(
     on_success_callback=notifier
 )
 
+# Load configuration from YAML file
+config_path = '/opt/airflow/config/config.yaml'
+with open(config_path, 'r') as f:
+    config = yaml.safe_load(f)
+
+# S3 Boto3 Client
+s3 = boto3.client('s3')
+s3_bucket = config['infrastructure']['aws']['s3_bucket']
+
+data_path = '/opt/airflow/data/telco_train.csv'
+
+
 
 def validate_data_quality(**context):
     """Validate data quality before training."""
     try:
         from scripts.preprocessing import DataPreprocessor, create_data_quality_report
 
-        # Load configuration using absolute path
-        config_path = '/opt/airflow/config/config.yaml'
-        with open(config_path, 'r') as f:
-            config = yaml.safe_load(f)
-
         # Load and validate data using absolute path
-        data_path = '/opt/airflow/data/WA_Fn-UseC_-Telco-Customer-Churn.csv'
         preprocessor = DataPreprocessor(config)
         df = preprocessor.load_data(data_path)
 
@@ -92,17 +101,11 @@ def preprocess_data(**context):
     """Preprocess data for training."""
     try:
         from scripts.preprocessing import DataPreprocessor
-        
-        # Load configuration using absolute path
-        config_path = '/opt/airflow/config/config.yaml'
-        with open(config_path, 'r') as f:
-            config = yaml.safe_load(f)
-        
+
         # Initialize preprocessor
         preprocessor = DataPreprocessor(config)
         
-        # Load and preprocess data using absolute path
-        data_path = '/opt/airflow/data/WA_Fn-UseC_-Telco-Customer-Churn.csv'
+        # Load and preprocess data
         df = preprocessor.load_data(data_path)
         df = preprocessor.validate_data(df)
         
@@ -113,12 +116,11 @@ def preprocess_data(**context):
         preprocessor.preprocessor = preprocessor.create_preprocessing_pipeline(X_train)
         X_train_processed, X_test_processed = preprocessor.fit_transform(X_train, X_test)
         
-        # Save preprocessor using absolute path
-        preprocessor_path = '/opt/airflow/models/preprocessor.pkl'
+        # Save preprocessor
+        preprocessor_path = f's3://{s3_bucket}/models/preprocessor.pkl'
         preprocessor.save_preprocessor(preprocessor_path)
         
         # Save processed data for training
-        import numpy as np
         np.save('/tmp/X_train_processed.npy', X_train_processed)
         np.save('/tmp/X_test_processed.npy', X_test_processed)
         np.save('/tmp/y_train.npy', y_train.values)
@@ -141,13 +143,7 @@ def train_models(**context):
     """Train machine learning models."""
     try:
         from scripts.train import ModelTrainer
-        import numpy as np
-        
-        # Load configuration using absolute path
-        config_path = '/opt/airflow/config/config.yaml'
-        with open(config_path, 'r') as f:
-            config = yaml.safe_load(f)
-        
+
         # Load processed data
         X_train = np.load('/tmp/X_train_processed.npy')
         X_test = np.load('/tmp/X_test_processed.npy')
@@ -164,19 +160,17 @@ def train_models(**context):
         # Save best model
         if trainer.best_model:
             model_version = datetime.now().strftime('%Y%m%d_%H%M%S')
-            model_path = trainer.save_model(trainer.best_model, trainer.best_model_name, model_version)
+            model_s3_path = trainer.save_model(trainer.best_model, trainer.best_model_name, model_version)
             
             # Register model with MLflow
-            trainer.register_model_with_mlflow(f"churn_prediction_{trainer.best_model_name}")
-            
+            trainer.register_model_with_mlflow(f"churn_prediction_{trainer.best_model_name}", trainer.best_run_id)
             logging.info(f"Training completed. Best model: {trainer.best_model_name}, Score: {trainer.best_score:.4f}")
             
             # Store results in XCom
             context['task_instance'].xcom_push(key='best_model_name', value=trainer.best_model_name)
             context['task_instance'].xcom_push(key='best_model_score', value=trainer.best_score)
-            context['task_instance'].xcom_push(key='model_path', value=model_path)
+            context['task_instance'].xcom_push(key='model_s3_path', value=model_s3_path)
             context['task_instance'].xcom_push(key='model_version', value=model_version)
-            
             return True
         else:
             raise ValueError("No model was successfully trained")
@@ -192,12 +186,8 @@ def evaluate_model_performance(**context):
         # Get training results from XCom
         best_model_score = context['task_instance'].xcom_pull(key='best_model_score', task_ids='train_models')
         model_name = context['task_instance'].xcom_pull(key='best_model_name', task_ids='train_models')
-        
-        # Performance threshold from config using absolute path
-        config_path = '/opt/airflow/config/config.yaml'
-        with open(config_path, 'r') as f:
-            config = yaml.safe_load(f)
-        
+
+        # Performance threshold from config
         threshold = config['monitoring']['performance_threshold']
         
         if best_model_score >= threshold:
@@ -224,26 +214,14 @@ def deploy_model(**context):
             logging.info("Model deployment skipped due to failed evaluation")
             return False
         
-        model_path = context['task_instance'].xcom_pull(key='model_path', task_ids='train_models')
+        model_s3_path = context['task_instance'].xcom_pull(key='model_s3_path', task_ids='train_models')
         model_version = context['task_instance'].xcom_pull(key='model_version', task_ids='train_models')
-        
-        # Copy model to production location using absolute path
-        production_path = '/opt/airflow/models/production_model.pkl'
-        import shutil
-        shutil.copy2(model_path, production_path)
-        
-        # Update model version file using absolute path
-        version_info = {
-            'model_version': model_version,
-            'deployment_time': datetime.now().isoformat(),
-            'model_path': model_path
-        }
-        
-        version_file_path = '/opt/airflow/models/production_version.json'
-        with open(version_file_path, 'w') as f:
-            import json
-            json.dump(version_info, f, indent=2)
-        
+        # Copy model to S3 production location (no local copy)
+        prod_key = 'models/production_model.pkl'
+        # Copy model within S3 (requires permissions)
+        copy_source = {'Bucket': s3_bucket, 'Key': model_s3_path.replace(f's3://{s3_bucket}/', '')}
+        s3.copy(copy_source, s3_bucket, prod_key)
+        logging.info(f"Model {model_s3_path} copied to S3 production location {prod_key}")
         logging.info(f"Model {model_version} deployed successfully to production")
         return True
         
