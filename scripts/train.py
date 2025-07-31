@@ -3,13 +3,13 @@ Model training pipeline for customer churn prediction.
 """
 
 import os
-import yaml
+# import yaml
 import joblib
 import mlflow
 import mlflow.sklearn
 import mlflow.xgboost
 import numpy as np
-import pandas as pd
+# import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import cross_val_score, GridSearchCV, StratifiedKFold
@@ -20,13 +20,18 @@ from typing import Dict, Any, Tuple, List
 import logging
 from datetime import datetime
 import boto3
-from botocore.exceptions import ClientError
+# from botocore.exceptions import ClientError
 import sys
+import tempfile
+import joblib
 
 sys.path.append(os.path.dirname(__file__))
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+s3_client = boto3.client('s3')
+
 
 
 class ModelTrainer:
@@ -228,13 +233,13 @@ class ModelTrainer:
                             if model_name == 'xgboost':
                                 mlflow.xgboost.log_model(
                                     optimized_model, 
-                                    artifact_path=f"{model_name}_model",
+                                    name=f"{model_name}_model",
                                     input_example=input_example
                                 )
                             else:
                                 mlflow.sklearn.log_model(
                                     optimized_model, 
-                                    artifact_path=f"{model_name}_model",
+                                    name=f"{model_name}_model",
                                     input_example=input_example
                                 )
                     except Exception as mlflow_error:
@@ -276,37 +281,31 @@ class ModelTrainer:
         return results
     
     def save_model(self, model, model_name: str, version: str = None):
-        """Save model to local and S3."""
-        if version is None:
-            version = datetime.now().strftime('%Y%m%d_%H%M%S')
-        
-        # Save locally
-        local_path = f'/opt/airflow/models/{model_name}_{version}.pkl'
-        os.makedirs(os.path.dirname(local_path), exist_ok=True)
-        joblib.dump(model, local_path)
-        logger.info(f"Model saved locally: {local_path}")
-        
-        # Save to S3 (if configured)
+        """Save model to S3."""
         try:
+            if version is None:
+                version = datetime.now().strftime('%Y%m%d_%H%M%S')
             s3_bucket = self.config.get('infrastructure', {}).get('aws', {}).get('s3_bucket')
-            if s3_bucket:
-                s3_client = boto3.client('s3')
-                s3_key = f"models/{model_name}_{version}.pkl"
-                s3_client.upload_file(local_path, s3_bucket, s3_key)
-                logger.info(f"Model saved to S3: s3://{s3_bucket}/{s3_key}")
+            s3_key = f"models/{model_name}_{version}.pkl"
+            with tempfile.NamedTemporaryFile(suffix='.pkl') as tmp:
+                joblib.dump(model, tmp.name)
+                s3_client.upload_file(tmp.name, s3_bucket, s3_key)
+            logger.info(f"Model saved to S3: s3://{s3_bucket}/{s3_key}")
+            return f's3://{s3_bucket}/{s3_key}'
         except Exception as e:
-            logger.warning(f"Failed to save model to S3: {str(e)}")
-        
-        return local_path
+            logger.error(f"Failed to save model to S3: {str(e)}")
+            raise
     
-    def load_model(self, model_path: str):
-        """Load a saved model."""
+    def load_model(self, s3_path: str):
         try:
-            model = joblib.load(model_path)
-            logger.info(f"Model loaded from {model_path}")
+            bucket, key = s3_path.replace('s3://', '').split('/', 1)
+            with tempfile.NamedTemporaryFile(suffix='.pkl') as tmp:
+                s3_client.download_file(bucket, key, tmp.name)
+                model = joblib.load(tmp.name)
+            logger.info(f"Model loaded from {s3_path}")
             return model
         except Exception as e:
-            logger.error(f"Error loading model: {str(e)}")
+            logger.error(f"Failed to load model from S3: {str(e)}")
             raise
 
     def register_model_with_mlflow(self, model_name: str, run_id: str = None):
@@ -329,7 +328,7 @@ class ModelTrainer:
             registered_model = mlflow.register_model(model_uri, model_name)
             logger.info(f"Model registered successfully with version {registered_model.version}")
             
-            # Set alias for the model version (replaces the deprecated stage system)
+            # Set alias for the model version
             client = mlflow.tracking.MlflowClient()
             client.set_registered_model_alias(
                 name=model_name,
@@ -345,48 +344,48 @@ class ModelTrainer:
             return None
 
 
-def main():
-    """Main training pipeline."""
-    # Load configuration
-    with open('/opt/airflow/config/config.yaml', 'r') as f:
-        config = yaml.safe_load(f)
+# def main():
+#     """Main training pipeline."""
+#     # Load configuration
+#     with open('/opt/airflow/config/config.yaml', 'r') as f:
+#         config = yaml.safe_load(f)
     
-    # Load preprocessed data (assuming preprocessing has been run)
-    try:
-        # This would normally load from the preprocessing step
+#     # Load preprocessed data (assuming preprocessing has been run)
+#     try:
+#         # This would normally load from the preprocessing step
         
-        from preprocessing import DataPreprocessor
+#         from preprocessing import DataPreprocessor
         
-        preprocessor = DataPreprocessor(config)
-        df = preprocessor.load_data('/opt/airflow/data/WA_Fn-UseC_-Telco-Customer-Churn.csv')
-        df = preprocessor.validate_data(df)
+#         preprocessor = DataPreprocessor(config)
+#         df = preprocessor.load_data('/opt/airflow/data/telco_train.csv')
+#         df = preprocessor.validate_data(df)
         
-        X_train, X_test, y_train, y_test = preprocessor.split_data(df)
-        preprocessor.preprocessor = preprocessor.create_preprocessing_pipeline(X_train)
-        X_train_processed, X_test_processed = preprocessor.fit_transform(X_train, X_test)
+#         X_train, X_test, y_train, y_test = preprocessor.split_data(df)
+#         preprocessor.preprocessor = preprocessor.create_preprocessing_pipeline(X_train)
+#         X_train_processed, X_test_processed = preprocessor.fit_transform(X_train, X_test)
         
-        # Initialize trainer
-        trainer = ModelTrainer(config)
-        trainer.create_models()
+#         # Initialize trainer
+#         trainer = ModelTrainer(config)
+#         trainer.create_models()
         
-        # Train models
-        results = trainer.train_models(X_train_processed, y_train, X_test_processed, y_test)
+#         # Train models
+#         results = trainer.train_models(X_train_processed, y_train, X_test_processed, y_test)
         
-        # Save best model
-        if trainer.best_model and trainer.best_model_name:
-            model_path = trainer.save_model(trainer.best_model, f"{trainer.best_model_name}_model")
-            trainer.register_model_with_mlflow(f"{trainer.best_model_name}_model", trainer.best_run_id)
+#         # Save best model
+#         if trainer.best_model and trainer.best_model_name:
+#             model_path = trainer.save_model(trainer.best_model, f"{trainer.best_model_name}_model")
+#             trainer.register_model_with_mlflow(f"{trainer.best_model_name}_model", trainer.best_run_id)
             
-            print(f"Training completed. Best model: {trainer.best_model_name}")
-            print(f"Best score: {trainer.best_score:.4f}")
-            print(f"Model saved to: {model_path}")
-        else:
-            print("Training failed: No models were successfully trained.")
-            return
-    except Exception as e:
-        logger.error(f"Training pipeline failed: {str(e)}")
-        raise
+#             print(f"Training completed. Best model: {trainer.best_model_name}")
+#             print(f"Best score: {trainer.best_score:.4f}")
+#             print(f"Model saved to: {model_path}")
+#         else:
+#             print("Training failed: No models were successfully trained.")
+#             return
+#     except Exception as e:
+#         logger.error(f"Training pipeline failed: {str(e)}")
+#         raise
 
 
-if __name__ == "__main__":
-    main()
+# if __name__ == "__main__":
+#     main()

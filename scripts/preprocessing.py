@@ -7,15 +7,20 @@ import numpy as np
 from sklearn.preprocessing import StandardScaler, LabelEncoder, OneHotEncoder
 from sklearn.model_selection import train_test_split
 from sklearn.compose import ColumnTransformer
-from sklearn.pipeline import Pipeline
+# from sklearn.pipeline import Pipeline
 import joblib
 import logging
 from typing import Tuple, Dict, Any
-import os
+# import os
 from datetime import datetime
+import tempfile
+import boto3
+import joblib
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+s3_client = boto3.client('s3')
 
 
 class DataPreprocessor:
@@ -117,28 +122,36 @@ class DataPreprocessor:
         logger.info("Data preprocessing completed.")
         return X_train_processed, X_test_processed
     
-    def save_preprocessor(self, file_path: str):
-        """Save the fitted preprocessor."""
-        if self.preprocessor is None:
-            raise ValueError("No preprocessor to save. Fit the preprocessor first.")
-        
-        os.makedirs(os.path.dirname(file_path), exist_ok=True)
-        joblib.dump({
-            'preprocessor': self.preprocessor,
-            'feature_columns': self.feature_columns,
-            'target_column': self.target_column
-        }, file_path)
-        
-        logger.info(f"Preprocessor saved to {file_path}")
+    def save_preprocessor(self, s3_path: str):
+        """Save the fitted preprocessor to S3."""
+        try:
+            bucket, key = s3_path.replace('s3://', '').split('/', 1)
+            with tempfile.NamedTemporaryFile(suffix='.pkl') as tmp:
+                joblib.dump({
+                    'preprocessor': self.preprocessor,
+                    'feature_columns': self.feature_columns,
+                    'target_column': self.target_column
+                }, tmp.name)
+                s3_client.upload_file(tmp.name, bucket, key)
+            logger.info(f"Preprocessor saved to {s3_path}")
+        except Exception as e:
+            logger.error(f"Failed to save preprocessor to S3: {str(e)}")
+            raise
     
-    def load_preprocessor(self, file_path: str):
-        """Load a saved preprocessor."""
-        data = joblib.load(file_path)
-        self.preprocessor = data['preprocessor']
-        self.feature_columns = data['feature_columns']
-        self.target_column = data['target_column']
-        
-        logger.info(f"Preprocessor loaded from {file_path}")
+    def load_preprocessor(self, s3_path: str):
+        """Load a saved preprocessor from S3."""
+        try:
+            bucket, key = s3_path.replace('s3://', '').split('/', 1)
+            with tempfile.NamedTemporaryFile(suffix='.pkl') as tmp:
+                s3_client.download_file(bucket, key, tmp.name)
+                data = joblib.load(tmp.name)
+            self.preprocessor = data['preprocessor']
+            self.feature_columns = data['feature_columns']
+            self.target_column = data['target_column']
+            logger.info(f"Preprocessor loaded from {s3_path}")
+        except Exception as e:
+            logger.error(f"Failed to load preprocessor from S3: {str(e)}")
+            raise
     
     def transform_new_data(self, df: pd.DataFrame) -> np.ndarray:
         """Transform new data using the fitted preprocessor."""
@@ -188,36 +201,36 @@ def create_data_quality_report(df: pd.DataFrame) -> Dict[str, Any]:
     return report
 
 
-if __name__ == "__main__":
-    import yaml
+# if __name__ == "__main__":
+#     import yaml
     
-    # Load configuration
-    with open('/opt/airflow/config/config.yaml', 'r') as f:
-        config = yaml.safe_load(f)
+#     # Load configuration
+#     with open('/opt/airflow/config/config.yaml', 'r') as f:
+#         config = yaml.safe_load(f)
     
-    # Initialize preprocessor
-    preprocessor = DataPreprocessor(config)
+#     # Initialize preprocessor
+#     preprocessor = DataPreprocessor(config)
     
-    # Load and preprocess data
-    df = preprocessor.load_data('/opt/airflow/data/WA_Fn-UseC_-Telco-Customer-Churn.csv')
-    df = preprocessor.validate_data(df)
+#     # Load and preprocess data
+#     df = preprocessor.load_data('/opt/airflow/data/telco_train.csv')
+#     df = preprocessor.validate_data(df)
     
-    # Create data quality report
-    quality_report = create_data_quality_report(df)
-    print("Data Quality Report:")
-    print(f"Total rows: {quality_report['total_rows']}")
-    print(f"Total columns: {quality_report['total_columns']}")
-    print(f"Missing values: {quality_report['missing_values']}")
+#     # Create data quality report
+#     quality_report = create_data_quality_report(df)
+#     print("Data Quality Report:")
+#     print(f"Total rows: {quality_report['total_rows']}")
+#     print(f"Total columns: {quality_report['total_columns']}")
+#     print(f"Missing values: {quality_report['missing_values']}")
     
-    # Split data
-    X_train, X_test, y_train, y_test = preprocessor.split_data(df)
+#     # Split data
+#     X_train, X_test, y_train, y_test = preprocessor.split_data(df)
     
-    # Create and fit preprocessing pipeline
-    preprocessor.preprocessor = preprocessor.create_preprocessing_pipeline(X_train)
-    X_train_processed, X_test_processed = preprocessor.fit_transform(X_train, X_test)
+#     # Create and fit preprocessing pipeline
+#     preprocessor.preprocessor = preprocessor.create_preprocessing_pipeline(X_train)
+#     X_train_processed, X_test_processed = preprocessor.fit_transform(X_train, X_test)
     
-    # Save preprocessor
-    preprocessor.save_preprocessor('/opt/airflow/models/preprocessor.pkl')
+#     # Save preprocessor
+#     preprocessor.save_preprocessor('/opt/airflow/models/preprocessor.pkl')
     
-    print(f"Preprocessed training data shape: {X_train_processed.shape}")
-    print(f"Preprocessed test data shape: {X_test_processed.shape}")
+#     print(f"Preprocessed training data shape: {X_train_processed.shape}")
+#     print(f"Preprocessed test data shape: {X_test_processed.shape}")
