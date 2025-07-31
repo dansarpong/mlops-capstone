@@ -7,6 +7,7 @@ on:
 env:
   REPO: dansarpong/mlops-capstone
   AWS_REGION: us-east-1
+  S3_BUCKET: mlops-dev-dansarpong-s3
 
 jobs:
   deploy-staging:
@@ -37,6 +38,9 @@ jobs:
             git clone https://github.com/${{ env.REPO }} mlops-capstone
             cd mlops-capstone
           fi
+
+          # Download env file from S3
+          aws s3 cp s3://${{ env.S3_BUCKET }}/.env .env
 
           # Stop existing Docker containers
           docker-compose -f docker-compose.yml down || true
