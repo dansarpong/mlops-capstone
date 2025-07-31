@@ -1,6 +1,6 @@
 # Data Configuration
 data:
-  source_path: "data/WA_Fn-UseC_-Telco-Customer-Churn.csv"
+  source_path: "data/telco_train.csv"
   target_column: "Churn"
   test_size: 0.2
   validation_size: 0.1
