@@ -1,5 +1,5 @@
 # Core ML libraries
-scikit-learn
+scikit-learn==1.7.0
 tensorflow
 torch
 torchvision
