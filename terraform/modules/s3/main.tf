@@ -103,12 +103,31 @@ resource "aws_s3_bucket_policy" "public_access" {
     Version = "2012-10-17"
     Statement = [
       for path in var.public_access_paths : {
-        Sid       = "PublicReadGetObject${replace(replace(path, "/", ""), "*", "All")}"
+        Sid       = "PublicReadWriteGetPutObject${replace(replace(path, "/", ""), "*", "All")}"
         Effect    = "Allow"
         Principal = "*"
-        Action    = "s3:GetObject"
+        Action    = ["s3:GetObject", "s3:PutObject"]
         Resource  = "${aws_s3_bucket.this.arn}/${path}"
       }
     ]
   })
 }
+
+# S3 Bucket CORS Configuration
+resource "aws_s3_bucket_cors_configuration" "this" {
+  count  = var.enable_cors ? 1 : 0
+  bucket = aws_s3_bucket.this.id
+
+  dynamic "cors_rule" {
+    for_each = var.cors_rules
+    content {
+      allowed_headers = cors_rule.value.allowed_headers
+      allowed_methods = cors_rule.value.allowed_methods
+      allowed_origins = cors_rule.value.allowed_origins
+      expose_headers  = cors_rule.value.expose_headers
+      max_age_seconds = cors_rule.value.max_age_seconds
+    }
+  }
+}
+
+

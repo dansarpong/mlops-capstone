@@ -22,3 +22,13 @@ output "public_access_paths" {
   description = "List of publicly accessible paths in the bucket."
   value       = var.public_access_paths
 }
+
+output "cors_enabled" {
+  description = "Whether CORS is enabled for this bucket."
+  value       = var.enable_cors
+}
+
+output "cors_configuration" {
+  description = "CORS configuration for the bucket."
+  value       = var.enable_cors ? var.cors_rules : null
+}

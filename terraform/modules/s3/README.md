@@ -51,35 +51,28 @@ module "s3_public_assets" {
 }
 ```
 
-## Public Access Configuration
+### Bucket with CORS Configuration
 
-To enable public access for certain paths in your S3 bucket:
+```hcl
+module "s3_bucket_cors" {
+  source = "./modules/s3"
 
-1. **Set `enable_public_access = true`** - This enables the public access feature
-2. **Configure public access blocks** - Set these to `false` to allow public access:
-   - `block_public_acls = false`
-   - `block_public_policy = false`
-   - `ignore_public_acls = false`
-   - `restrict_public_buckets = false`
-3. **Define `public_access_paths`** - List the paths/prefixes that should be publicly accessible
+  bucket_name = "my-cors-enabled-bucket"
+  versioning  = true
+  
+  # CORS configuration
+  enable_cors = true
 
-### Path Examples
-
-- `"public/*"` - All files under the `public/` prefix
-- `"assets/images/*"` - All files under `assets/images/` prefix
-- `"static/css/*.css"` - All CSS files under `static/css/`
-- `"favicon.ico"` - Specific file
-- `"docs/api/*"` - All files under `docs/api/` prefix
-
-### Security Considerations
-
-⚠️ **Important Security Notes:**
-
-1. **Only enable public access when absolutely necessary**
-2. **Be specific with your paths** - Use precise prefixes rather than broad wildcards
-3. **Regularly audit your public paths** - Review what's publicly accessible
-4. **Consider using CloudFront** - For better performance and security
-5. **Monitor access logs** - Keep track of who's accessing your public content
+  cors_rules = [
+    {
+      allowed_headers = ["*"]
+      allowed_methods = ["GET", "PUT", "POST", "DELETE", "HEAD"]
+      allowed_origins = ["https://example.com"]
+      max_age_seconds = 3000
+    }
+  ]
+}
+```
 
 ## Variables
 
@@ -87,6 +80,9 @@ To enable public access for certain paths in your S3 bucket:
 |------|-------------|------|---------|----------|
 | `bucket_name` | The name of the S3 bucket | `string` | - | yes |
 | `enable_public_access` | Enable public access to the bucket | `bool` | `false` | no |
+| `enable_cors` | Enable CORS configuration | `bool` | `false` | no |
+| `cors_rules` | List of CORS rules | `list(object)` | `[]` | no |
+| `versioning` | Enable versioning for the bucket | `bool` | `false` | no |
 | `public_access_paths` | List of paths that should be publicly accessible | `list(string)` | `[]` | no |
 | `block_public_acls` | Whether to block public ACLs | `bool` | `true` | no |
 | `block_public_policy` | Whether to block public bucket policies | `bool` | `true` | no |
@@ -109,10 +105,8 @@ To enable public access for certain paths in your S3 bucket:
 | `bucket_website_endpoint` | The website endpoint |
 | `public_access_enabled` | Whether public access is enabled |
 | `public_access_paths` | List of publicly accessible paths |
-
-## Examples
-
-See `examples.tf` for detailed usage examples.
+| `cors_enabled` | Whether CORS is enabled |
+| `cors_configuration` | CORS configuration of the bucket |
 
 ## Accessing Public Files
 
