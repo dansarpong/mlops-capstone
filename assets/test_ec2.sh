@@ -3,7 +3,7 @@
 sudo yum update -y
 
 # Install dependencies
-sudo yum install postgresql17 git python3.11 -y
+sudo yum install postgresql17 git python3.12 -y
 
 # Install Docker and Docker Compose
 sudo yum install -y docker

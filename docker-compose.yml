@@ -27,7 +27,7 @@ x-airflow-common:
     AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
     AWS_DEFAULT_REGION: ${AWS_REGION}
     AWS_S3_ENDPOINT_URL: https://s3.${AWS_REGION}.amazonaws.com
-    PYTHONPATH: /opt/venv/lib/python3.11/site-packages
+    PYTHONPATH: /opt/venv/lib/python3.12/site-packages
   volumes:
     - ${AIRFLOW_PROJ_DIR:-.}/pipelines:/opt/airflow/dags
     - ${AIRFLOW_PROJ_DIR:-.}/logs:/opt/airflow/logs
@@ -45,7 +45,7 @@ x-airflow-common:
 services:
   # MLflow Tracking Server
   mlflow:
-    image: python:3.11-slim
+    image: python:3.12-slim
     container_name: mlflow-server
     command: >
       bash -c "
@@ -60,7 +60,7 @@ services:
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
       - AWS_DEFAULT_REGION=${AWS_REGION}
       - AWS_REGION=${AWS_REGION}
-      - PYTHONPATH=/opt/venv/lib/python3.11/site-packages
+      - PYTHONPATH=/opt/venv/lib/python3.12/site-packages
     volumes:
       - ${SHARED_VENV_PATH:-./venv}:/opt/venv
     networks:
@@ -270,7 +270,7 @@ services:
       _PIP_ADDITIONAL_REQUIREMENTS: ''
     user: "0:0"
 
-# Nginx Load Balancer for A/B Testing
+  # Nginx Load Balancer for A/B Testing
   nginx:
     image: nginx:alpine
     container_name: nginx-lb
@@ -311,7 +311,7 @@ services:
 
   # Inference API
   inference-api:
-    image: python:3.11-slim
+    image: python:3.12-slim
     command: >
       bash -c "
         python3 -m uvicorn scripts.inference_api:app --host 0.0.0.0 --port 8000
@@ -328,7 +328,7 @@ services:
       - AWS_DEFAULT_REGION=${AWS_REGION}
       - AWS_S3_ENDPOINT_URL=https://s3.${AWS_REGION}.amazonaws.com
       - MLFLOW_S3_ENDPOINT_URL=https://s3.${AWS_REGION}.amazonaws.com
-      - PYTHONPATH=/opt/venv/lib/python3.11/site-packages
+      - PYTHONPATH=/opt/venv/lib/python3.12/site-packages
     volumes:
       - ./config:/app/config
       - ./scripts:/app/scripts
