@@ -3,7 +3,6 @@ FastAPI-based inference API for customer churn prediction with A/B testing suppo
 """
 
 import os
-# import json
 import joblib
 import numpy as np
 import pandas as pd
@@ -11,17 +10,12 @@ from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from pydantic import BaseModel, Field
-from typing import List, Dict, Any, Optional
-# import logging
-# import asyncio
+from typing import List, Dict, Any
 from datetime import datetime
 import uuid
-# import boto3
 from prometheus_client import Counter, Histogram, generate_latest, CONTENT_TYPE_LATEST
 from starlette.responses import Response
 import structlog
-# import mlflow
-# import mlflow.sklearn
 from contextlib import asynccontextmanager
 import sys
 import boto3

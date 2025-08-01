@@ -7,7 +7,6 @@ from datetime import datetime, timedelta
 from airflow.providers.standard.operators.python import PythonOperator
 from airflow.providers.smtp.notifications.smtp import SmtpNotifier
 import sys
-import os
 import yaml
 import logging
 import boto3

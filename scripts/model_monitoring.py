@@ -2,20 +2,13 @@
 Monitoring and A/B testing infrastructure for customer churn prediction models.
 """
 
-import os
-import json
-# import pandas as pd
 import numpy as np
-from datetime import datetime, timedelta
-from typing import Dict, Any, List, Tuple
-# import logging
-# import mlflow
-# import boto3
+from datetime import datetime
+from typing import Dict, Any, List
 from scipy import stats
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score
 import structlog
-from prometheus_client import Gauge, Counter, Histogram
-# import yaml
+from prometheus_client import Gauge, Counter
 
 # Configure logging
 structlog.configure(

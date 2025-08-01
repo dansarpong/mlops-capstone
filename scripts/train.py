@@ -3,24 +3,21 @@ Model training pipeline for customer churn prediction.
 """
 
 import os
-# import yaml
 import joblib
 import mlflow
 import mlflow.sklearn
 import mlflow.xgboost
 import numpy as np
-# import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
-from sklearn.model_selection import cross_val_score, GridSearchCV, StratifiedKFold
+from sklearn.model_selection import cross_val_score, StratifiedKFold
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score, classification_report, confusion_matrix
 import xgboost as xgb
 import optuna
-from typing import Dict, Any, Tuple, List
+from typing import Dict, Any
 import logging
 from datetime import datetime
 import boto3
-# from botocore.exceptions import ClientError
 import sys
 import tempfile
 import joblib

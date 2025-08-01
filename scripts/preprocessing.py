@@ -4,14 +4,12 @@ Data preprocessing pipeline for customer churn prediction.
 
 import pandas as pd
 import numpy as np
-from sklearn.preprocessing import StandardScaler, LabelEncoder, OneHotEncoder
+from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.model_selection import train_test_split
 from sklearn.compose import ColumnTransformer
-# from sklearn.pipeline import Pipeline
 import joblib
 import logging
 from typing import Tuple, Dict, Any
-# import os
 from datetime import datetime
 import tempfile
 import boto3
