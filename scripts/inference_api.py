@@ -95,6 +95,7 @@ if os.path.exists(config_path):
 
 s3 = boto3.client('s3')
 s3_bucket = config['infrastructure']['aws']['s3_bucket']
+monitoring_config = config
 
 
 class CustomerData(BaseModel):
