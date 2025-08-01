@@ -6,8 +6,3 @@ COPY requirements.txt /tmp/requirements.txt
 
 # Install the Python dependencies
 RUN pip install --no-cache-dir -r /tmp/requirements.txt
-
-# For production, embedding them in the image is more common.
-# COPY ./pipelines /opt/airflow/dags
-# COPY ./scripts /opt/airflow/scripts
-# COPY ./config /opt/airflow/config
