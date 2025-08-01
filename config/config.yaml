@@ -53,7 +53,7 @@ ab_testing:
 
 # Monitoring Configuration
 monitoring:
-  performance_threshold: 0.85
+  performance_threshold: 0.8
   data_drift_threshold: 0.1
   prediction_drift_threshold: 0.1
   alert_email: "dansarpong.me@gmail.com"
