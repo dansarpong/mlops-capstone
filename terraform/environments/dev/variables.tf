@@ -62,7 +62,7 @@ variable "ports" {
 variable "instance_type" {
   description = "Instance type for the ASG EC2 instances"
   type        = string
-  default     = "t3.medium"
+  default     = "t3.large"
 }
 
 variable "amzn_2023_ami" {
@@ -80,7 +80,7 @@ variable "key_pair_name" {
 variable "root_volume_size" {
   description = "Size of the root EBS volume in GiB"
   type        = number
-  default     = 20
+  default     = 80
 }
 
 # RDS
