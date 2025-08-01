@@ -62,7 +62,7 @@ variable "ports" {
 variable "instance_type" {
   description = "Instance type for the ASG EC2 instances"
   type        = string
-  default     = "t2.micro"
+  default     = "t3.medium"
 }
 
 variable "amzn_2023_ami" {
