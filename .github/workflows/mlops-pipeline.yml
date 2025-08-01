@@ -46,4 +46,4 @@ jobs:
           docker-compose -f docker-compose.yml down || true
 
           # Start Docker containers
-          docker-compose -f docker-compose.yml up -d
+          docker-compose -f docker-compose.yml up -d --build
