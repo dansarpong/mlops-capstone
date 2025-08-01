@@ -8,6 +8,7 @@ env:
   REPO: dansarpong/mlops-capstone
   AWS_REGION: us-east-1
   S3_BUCKET: mlops-dev-dansarpong-s3
+  SHARED_VENV_PATH: venv
 
 jobs:
   deploy-staging:
@@ -31,16 +32,19 @@ jobs:
         key: ${{ secrets.EC2_SSH_KEY }}
         script: |
           # Clone the repository
-          if [ -d "mlops-capstone" ]; then
-            cd mlops-capstone
-            git pull origin main
-          else
-            git clone https://github.com/${{ env.REPO }} mlops-capstone
-            cd mlops-capstone
-          fi
+          rm -rf mlops-capstone || true
+          git clone https://github.com/${{ env.REPO }} mlops-capstone
+          cd mlops-capstone
 
           # Download env file from S3
           aws s3 cp s3://${{ env.S3_BUCKET }}/.env .env
+
+          # Set up shared python environment
+          if [ ! -d "${{ env.SHARED_VENV_PATH }}" ]; then
+            python3.11 -m venv ${{ env.SHARED_VENV_PATH }}
+          fi
+          source ${{ env.SHARED_VENV_PATH }}/bin/activate
+          pip install -r requirements.txt
 
           # Stop existing Docker containers
           docker-compose -f docker-compose.yml down || true
